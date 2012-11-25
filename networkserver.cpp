@@ -34,6 +34,9 @@ std::string connection(char* root, int portNum)
     char* buffer;
     unsigned long fLen;
     struct stat st;
+    std:string statusMessage;
+    
+
     
     struct sockaddr_in ip4addr;
     
@@ -61,7 +64,15 @@ std::string connection(char* root, int portNum)
     
     
     //fileNameIn = strtok(fileNameIn.c_str(),"GET ");
+    //char* tempFileIn2 = strtok((char*)fileNameIn.c_str(),"/");
+    //fileNameIn = (std::string) tempFileIn2;
     std::string fullInput = fileNameIn;
+    
+    /*if(fullInput.find("GET ") != string::npos || fullInput.find("HTTP/1.0") != string::npos)
+    {
+        statusMessage = "HTTP/1.0 400 Bad Request; ";
+        
+    }*/
     
     char* tempFileIn = strtok((char*)fileNameIn.c_str(),"GET ");
     tempFileIn = strtok(tempFileIn,"HTTP/1.0");
@@ -83,6 +94,11 @@ std::string connection(char* root, int portNum)
             //cout << fileName << "\n";
         }
     }
+    /*if(requestedFile == "")
+    {
+        statusMessage = "HTTP/1.0 404 Not Found; ";
+    }*/
+    std::string fileNameRaw = requestedFile;
     requestedFile.insert(0,"/");
     requestedFile.insert(0,root);
     f = fopen(requestedFile.c_str(),"rb");
@@ -123,8 +139,14 @@ std::string connection(char* root, int portNum)
     //returnAddr.insert(0, portString);
     char* portOut;
     sprintf(portOut,"%d",ntohs(hostAddr.sin_port));
-    returnAddr.insert(0, fullInput);
-    returnAddr.insert(0, " ");
+    statusMessage = "HTTP/1.0 200 OK; ";
+
+    returnAddr.insert(0,requestedFile);
+    returnAddr.insert(0,statusMessage);
+    returnAddr.insert(0," HTTP/1.0; ");
+    returnAddr.insert(0,fileNameRaw);
+    returnAddr.insert(0,"/");
+    returnAddr.insert(0," GET ");
     returnAddr.insert(0, portOut);
     returnAddr.insert(0, ":");
     returnAddr.insert(0, inet_ntoa(hostAddr.sin_addr));
