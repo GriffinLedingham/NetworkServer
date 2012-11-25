@@ -5,57 +5,41 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <arpa/inet.h>
 
 using namespace std;
 
 //SOCK_STREAM
 
-int main (int numArgs, char** args)
+int connection(char* root, int portNum)
 {
-	int portNum;
-	//int PF_INET, SOCK_STREAM;
-    char* root;
-	//cout << SOCK_STREAM;
     DIR *myDir;
     struct dirent *dirp;
     FILE *f;
     char* buffer;
     unsigned long fLen;
     struct stat st;
-
-
-	if(numArgs == 3)
-	{
-		portNum = atoi(args[1]);
-		root = (char*)malloc(sizeof(char)*sizeof(strlen(args[2]+1)));
-        root = args[2];
-	}
-	else
-	{
-		cout << "Argument Error, arguments need to be in the form of <port> <directory>.\n";
-		return 0;
-	}
     
-
-	struct sockaddr_in ip4addr;
-
+    struct sockaddr_in ip4addr;
+    
 	ip4addr.sin_family = AF_INET;
 	ip4addr.sin_port = htons(portNum);
 	ip4addr.sin_addr.s_addr = INADDR_ANY;
 	
 	int sockfd = socket(PF_INET, SOCK_STREAM, 0);
 	bind(sockfd, (sockaddr*)&ip4addr, sizeof(sockaddr_in));
-
+    
     
     cout << "sws is running on TCP port " << portNum << " and serving " << root << "\n";
     cout << "press ‘q’ to quit ...\n";
-
+    
 	void *buf = calloc(5000, sizeof(char));
 	listen(sockfd, SOMAXCONN);
 	socklen_t len;
 	int sockTemp = accept(sockfd, (sockaddr*)&ip4addr, &len);
-	
 	recv(sockTemp, buf, 5000, 0);
+    
+    
     
     std::string fileNameIn = strtok((char*)buf,"\r\n");
     if(!fileNameIn.empty())
@@ -96,20 +80,47 @@ int main (int numArgs, char** args)
         fclose(f);
 		exit(1);
 	}
-
+    
     fread(buffer, fLen, 1, f);
     cout<<"Buffer has been written with length " << fLen << " \n";
 	fclose(f);
-
-    //cout << fileNameIn << "a\n\n";
     
-    //cout << fileName << "\n\n";*/
+    struct sockaddr_in hostAddr;
+    getpeername(sockTemp, (sockaddr *)&hostAddr, &len);
     
-/*  NEED TO CAST THE BUFFER TO A STRING SO THAT WE CAN PASS IT TO LOCATE THE FILE TO SEND
-	string s(buf);
+    cout << "Peer Name: " << inet_ntoa(hostAddr.sin_addr) << "\n";
+    
+    send(sockTemp,(char*)buffer,fLen+1,0);
+    
+    return 1;
+}
 
-cout<< s;
-*/
+int main (int numArgs, char** args)
+{
+	int portNum;
+    char* root;
+    int seq;
 
+	if(numArgs == 3)
+	{
+		portNum = atoi(args[1]);
+		root = (char*)malloc(sizeof(char)*sizeof(strlen(args[2]+1)));
+        root = args[2];
+	}
+	else
+	{
+		cout << "Argument Error, arguments need to be in the form of <port> <directory>.\n";
+		return 0;
+	}
+    
+    
+    while(true){
+    if(connection(root, portNum) == 1)
+    {
+        seq++;
+    }
+    }
 		
 }
+
+
