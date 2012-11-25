@@ -63,9 +63,11 @@ std::string connection(char* root, int portNum)
     //fileNameIn = strtok(fileNameIn.c_str(),"GET ");
     std::string fullInput = fileNameIn;
     
-    char* tempFileIn = strtok((char*)fileNameIn.c_str(),"GET ");
-    tempFileIn = strtok(tempFileIn,"HTTP/1.0");
-    fileNameIn = (std::string)tempFileIn;
+    //THIS IS WHATS STRIPPING SPACES AND DOTS
+    
+    //char* tempFileIn = strtok((char*)fileNameIn.c_str(),"GET ");
+    //tempFileIn = strtok(tempFileIn,"HTTP/1.0");
+    //fileNameIn = (std::string)tempFileIn;
     
     if(!fileNameIn.empty())
     {
@@ -80,7 +82,6 @@ std::string connection(char* root, int portNum)
         if(fileName == fileNameIn)
         {
             requestedFile = fileName;
-            //cout << fileName << "\n";
         }
     }
     requestedFile.insert(0,"/");
@@ -93,9 +94,6 @@ std::string connection(char* root, int portNum)
     
     stat(requestedFile.c_str(),&st);
     fLen = st.st_size;
-    //fseek(f, 0L, SEEK_END);
-	//fLen=ftell(f);
-	//fseek(f, 0L, SEEK_SET);
     
 	buffer=(char*)malloc(fLen+1);
     
@@ -134,8 +132,6 @@ std::string connection(char* root, int portNum)
 
 int main (int numArgs, char** args)
 {
-    
-    
 	int portNum;
     char* root;
     int seq = 0;
@@ -152,7 +148,6 @@ int main (int numArgs, char** args)
 		return 0;
 	}
     
-    
     std::string peerAddr = connection(root, portNum);
     if(!peerAddr.empty())
     {
@@ -160,13 +155,7 @@ int main (int numArgs, char** args)
         cout << seq << " ";
         printTime();
         cout << " " << peerAddr << "\n";
-    }
-    //{
-    //    seq++;
-        
-    //}
-    
-		
+    }	
 }
 
 
