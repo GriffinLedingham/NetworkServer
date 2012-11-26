@@ -26,6 +26,8 @@ int printTime()
     cout << buffer;
 }
 
+std::reqWait(int sockfd)
+
 std::string connection(char* root, int portNum)
 {
     DIR *myDir;
@@ -34,6 +36,7 @@ std::string connection(char* root, int portNum)
     char* buffer;
     unsigned long fLen;
     struct stat st;
+    int opt = 1;
     
     struct sockaddr_in ip4addr;
     
@@ -42,6 +45,7 @@ std::string connection(char* root, int portNum)
 	ip4addr.sin_addr.s_addr = INADDR_ANY;
 	
 	int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, (char*)&opt,sizeof(opt));
 	bind(sockfd, (sockaddr*)&ip4addr, sizeof(sockaddr_in));
     
     
@@ -126,6 +130,8 @@ std::string connection(char* root, int portNum)
     returnAddr.insert(0, portOut);
     returnAddr.insert(0, ":");
     returnAddr.insert(0, inet_ntoa(hostAddr.sin_addr));
+    
+    close(sockTemp);
     
     return returnAddr;
 }
