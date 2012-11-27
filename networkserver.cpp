@@ -26,9 +26,7 @@ int printTime()
     cout << buffer;
 }
 
-std::reqWait(int sockfd)
-
-std::string connection(char* root, int portNum)
+void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
 {
     DIR *myDir;
     struct dirent *dirp;
@@ -36,36 +34,77 @@ std::string connection(char* root, int portNum)
     char* buffer;
     unsigned long fLen;
     struct stat st;
-    int opt = 1;
+    std::string parsedInput[3];
+    socklen_t len;
+    std:string statusMessage = "HTTP/1.0 200 OK; ";
+    bool fnf = true;
     
-    struct sockaddr_in ip4addr;
+    void *buf = calloc(5000, sizeof(char));
+
     
-	ip4addr.sin_family = AF_INET;
-	ip4addr.sin_port = htons(portNum);
-	ip4addr.sin_addr.s_addr = INADDR_ANY;
-	
-	int sockfd = socket(PF_INET, SOCK_STREAM, 0);
-    setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, (char*)&opt,sizeof(opt));
-	bind(sockfd, (sockaddr*)&ip4addr, sizeof(sockaddr_in));
-    
-    
-    cout << "sws is running on TCP port " << portNum << " and serving " << root << "\n";
-    cout << "press ‘q’ to quit ...\n";
-    
-	void *buf = calloc(5000, sizeof(char));
-	listen(sockfd, SOMAXCONN);
-	socklen_t len;
 	int sockTemp = accept(sockfd, (sockaddr*)&ip4addr, &len);
 	recv(sockTemp, buf, 5000, 0);
     
-    
+    struct sockaddr_in hostAddr;
+    getpeername(sockTemp, (sockaddr *)&hostAddr, &len);
     
     std::string fileNameIn;
+    
     fileNameIn= strtok((char*)buf,"\r\n");
+    cout << (char*)fileNameIn;
+    cout << endl;
+    std::string fullInput = fileNameIn;
+    
+    std::string temp;
+    temp = (std::string)strtok((char*)fileNameIn.c_str()," ");
+    bool emptyFlag= false;
+    
+    
+    for(int i =0;i<2;i++)
+    {
+        if(temp.empty())
+        {
+            emptyFlag = true;
+            break;
+        }
+        
+        parsedInput[i] = temp;
+        
+        temp = strtok(NULL, " ");
+        /*if(temp.find("/"))
+        {
+            temp = temp.substr(1,temp.length()-1);
+        }*/
+        cout << parsedInput[i] << "\n";
+        //cout << parsedInput[i] << "\n";
+        
+    }
+    if(!emptyFlag)
+    {
+        parsedInput[2] = temp;
+        cout << parsedInput[2] << "\n";
+    }
+    //cout << parsedInput[2] << "\n";
+    //temp
+    fileNameIn = parsedInput[1];
+    
+    if(parsedInput[0] != "GET" || parsedInput[2] != "HTTP/1.0")
+    {
+        statusMessage = "HTTP/1.0 400 Bad Request; ";
+        cout << seq << " ";
+        
+        printTime();
+        
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << fullInput << "; "<< statusMessage << "\n";
+        close(sockTemp);
+        return;
+        
+    }
+    
     
     
     //fileNameIn = strtok(fileNameIn.c_str(),"GET ");
-    std::string fullInput = fileNameIn;
+    //std::string fullInput = fileNameIn;
     
     //THIS IS WHATS STRIPPING SPACES AND DOTS
     
@@ -86,14 +125,27 @@ std::string connection(char* root, int portNum)
         if(fileName == fileNameIn)
         {
             requestedFile = fileName;
+            fnf = false;
         }
     }
     requestedFile.insert(0,"/");
     requestedFile.insert(0,root);
     f = fopen(requestedFile.c_str(),"rb");
-    if(f==NULL)
+    
+    
+
+    if(fnf)
     {
-        cout<<"File = null pointer\n";
+        //cout<<"File = null pointer\n";
+        statusMessage = "HTTP/1.0 404 Not Found; ";
+        cout << seq << " ";
+        
+        printTime();
+        
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << fullInput << "; "<< statusMessage << "\n";
+        close(sockTemp);
+        return;
+
     }
     
     stat(requestedFile.c_str(),&st);
@@ -109,38 +161,77 @@ std::string connection(char* root, int portNum)
 	}
     
     fread(buffer, fLen, 1, f);
-    cout<<"Buffer has been written with length " << fLen << " \n";
+    //cout<<"Buffer has been written with length " << fLen << " \n";
 	fclose(f);
     
-    struct sockaddr_in hostAddr;
-    getpeername(sockTemp, (sockaddr *)&hostAddr, &len);
     
-    cout << "Peer Name: " << inet_ntoa(hostAddr.sin_addr) << "\n";
+    //cout << "Peer Name: " << inet_ntoa(hostAddr.sin_addr) << "\n";
+    //cout << "TEST TEST";
+    cout << seq << " ";
+
+    printTime();
+    
+    cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << parsedInput[0] << " " << parsedInput[1] << " " << parsedInput[2] << ";"<< statusMessage << " "<< root << parsedInput[1];
+    
+    cout << endl;
     
     send(sockTemp,(char*)buffer,fLen+1,0);
     
-    std::string returnAddr;
+    
+    //std::string returnAddr;
     //cout << hostAddr.sin_port;
     //printf("%u", hostAddr.sin_port);
     //returnAddr.insert(0, portString);
-    char* portOut;
-    sprintf(portOut,"%d",ntohs(hostAddr.sin_port));
-    returnAddr.insert(0, fullInput);
-    returnAddr.insert(0, " ");
-    returnAddr.insert(0, portOut);
-    returnAddr.insert(0, ":");
-    returnAddr.insert(0, inet_ntoa(hostAddr.sin_addr));
+    //char* portOut;
+    //sprintf(portOut,"%d",ntohs(hostAddr.sin_port));
+    //returnAddr.insert(0, parsedInput[2]);
+    //returnAddr.insert(0, " ");
+    //returnAddr.insert(0, portOut);
+    //returnAddr.insert(0, ":");
+    //returnAddr.insert(0, inet_ntoa(hostAddr.sin_addr));
     
     close(sockTemp);
     
-    return returnAddr;
+    //return returnAddr;
+}
+
+std::string connection(char* root, int portNum)
+{
+    int seq = 0;
+
+    
+    int opt = 1;
+    
+    struct sockaddr_in ip4addr;
+    
+	ip4addr.sin_family = AF_INET;
+	ip4addr.sin_port = htons(portNum);
+	ip4addr.sin_addr.s_addr = INADDR_ANY;
+	
+	int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, (char*)&opt,sizeof(opt));
+	bind(sockfd, (sockaddr*)&ip4addr, sizeof(sockaddr_in));
+    
+    
+    cout << "sws is running on TCP port " << portNum << " and serving " << root << "\n";
+    cout << "press ‘q’ to quit ...\n";
+    
+    
+    while(true)
+    {
+        listen(sockfd, SOMAXCONN);
+    
+        reqWait(sockfd, ip4addr, root, seq);
+        seq++;
+        
+    }
+	
 }
 
 int main (int numArgs, char** args)
 {
 	int portNum;
     char* root;
-    int seq = 0;
 
 	if(numArgs == 3)
 	{
@@ -154,14 +245,14 @@ int main (int numArgs, char** args)
 		return 0;
 	}
     
-    std::string peerAddr = connection(root, portNum);
-    if(!peerAddr.empty())
-    {
-        seq++;
-        cout << seq << " ";
-        printTime();
-        cout << " " << peerAddr << "\n";
-    }	
+    //std::string peerAddr = connection(root, portNum);
+    
+    connection(root,portNum);
+    
+       // cout << seq << " ";
+        
+       //cout << " " << peerAddr << "\n";
+    //}
 }
 
 
