@@ -7,9 +7,12 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <termios.h>
 
 
 using namespace std;
+#define NB_ENABLE 1
+#define NB_DISABLE 0
 
 //SOCK_STREAM
 
@@ -277,10 +280,49 @@ std::string connection(char* root, int portNum)
     
     while(true)
     {
-        listen(sockfd, SOMAXCONN);
+        fd_set listenfds;
+        FD_ZERO(&listenfds);
+        FD_SET(sockfd,&listenfds);
+        FD_SET(STDIN_FILENO,&listenfds);
+        //FD_SET( ,inputfds);
+        
+        //{
+
+        if(select(16000 , &listenfds , NULL , NULL , NULL))
+        {
+            
+            
+            
+            
+            if(FD_ISSET(sockfd,&listenfds))
+            {
+
+            listen(sockfd, SOMAXCONN);
+            reqWait(sockfd, ip4addr, root, seq);
+            seq++;
+            }
+            
+            /*if(FD_ISSET(STDIN_FILENO,&listenfds))
+            {
+                exit(0);
+            }*/
+            /*else if(FD_ISSET(0,&listenfds))
+            {
+                if(getchar() =='q')
+                {
+                    close(sockfd);
+                    exit(0);
+                }
+            }*/
+        }
+        
+        //else
+        //{
+          
+        //}
+        
     
-        reqWait(sockfd, ip4addr, root, seq);
-        seq++;
+        
         
     }
 	
