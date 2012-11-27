@@ -151,7 +151,7 @@ std:string statusMessage = "HTTP/1.0 200 OK; ";
     
     fileNameIn.insert(0,requestedFile);
     
-    cout << requestedFile<< " filenameIN "<< fileNameIn<< endl;
+    //cout << requestedFile<< " filenameIN "<< fileNameIn<< endl;
     
     f = fopen(requestedFile.c_str(),"rb");
     
@@ -240,6 +240,8 @@ std::string connection(char* root, int portNum)
             fgets(buffer,1000,stdin);
             if(buffer[0] =='q')
             {
+                close(sockfd);
+                close(portNum);
                 exit(0);
             }
         }
