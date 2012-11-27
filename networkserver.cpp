@@ -7,14 +7,12 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <stdio.h>
 #include <termios.h>
 
+static struct termios stored_settings;
 
 using namespace std;
-#define NB_ENABLE 1
-#define NB_DISABLE 0
-
-//SOCK_STREAM
 
 int printTime()
 {
@@ -39,7 +37,7 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
     struct stat st;
     std::string parsedInput[3];
     socklen_t len;
-    std:string statusMessage = "HTTP/1.0 200 OK; ";
+std:string statusMessage = "HTTP/1.0 200 OK; ";
     bool fnf = true;
     bool weTookOutASlash = false;
     bool baseCase = false;
@@ -47,7 +45,7 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
     int count = 0;
     
     void *bufIn = calloc(5000, sizeof(char));
-
+    
     
 	int sockTemp = accept(sockfd, (sockaddr*)&ip4addr, &len);
 	recv(sockTemp, bufIn, 5000, 0);
@@ -65,49 +63,37 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
         buf[4] = '/';
         weTookOutASlash= false;
     }
-    else if(buf[4] == '/')// && !fileNameIn.find(slash))
+    else if(buf[4] == '/')
     {
         buf[4] = ' ';
         weTookOutASlash = true;
         
     }
     
-    //"GET index.html HTTP/1.0"
-    
-    //if(fileNameIn.find(slash)){
-    
-    
     fileNameIn= strtok((char*)buf,"\r\n");
-    //cout << fileNameIn;
-    //cout << endl;
+    
+    if(fileNameIn.find("..") != string::npos)
+    {
+        statusMessage = "HTTP/1.0 400 Bad Request; ";
+        cout << seq << " ";
+        
+        printTime();
+        
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <<"; "<< statusMessage << "\n";
+        close(sockTemp);
+        return;
+    }
+    
     std::string fullInput = fileNameIn;
     
-    //std::string temp;
     char* temp;
-    temp = /*(std::string)*/strtok((char*)fileNameIn.c_str()," ");
-
-    
-    //temp = strtok(NULL, " ");
+    temp =strtok((char*)fileNameIn.c_str()," ");
     
     while(temp != NULL && count<3)
     {
-       /* if(temp.empty())
-        {
-            emptyFlag = true;
-            break;
-        }
-        */
         parsedInput[count] = temp;
-        cout << parsedInput[count] << endl;
         temp = strtok(NULL, " ");
         count++;
-               /*if(temp.find("/"))
-        {
-            temp = temp.substr(1,temp.length()-1);
-        }*/
-        //cout << parsedInput[i] << "\n";
-        //cout << parsedInput[i] << "\n";
-        
     }
     if(temp !=NULL)
     {
@@ -116,40 +102,27 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
         
         printTime();
         
-        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <</* " " << parsedInput[0] << " /" <<parsedInput[1] << " " << parsedInput[2] << */"; "<< statusMessage << "\n";
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <<"; "<< statusMessage << "\n";
         close(sockTemp);
-        badFlag=1;
         return;
     }
-
     
-    //cout << parsedInput[2] << "\n";
-    //temp
     fileNameIn = parsedInput[1];
+	char* get = (char*)parsedInput[0].c_str();
+	char* http = (char*)parsedInput[2].c_str();
     
-    if(parsedInput[0] != "GET" || parsedInput[2] != "HTTP/1.0")
+    if(strcasecmp(get,"get")!=0 || strcasecmp(http,"http/1.0")!=0)
     {
         statusMessage = "HTTP/1.0 400 Bad Request; ";
         cout << seq << " ";
         
         printTime();
         
-        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <</* " " << parsedInput[0] << " /" <<parsedInput[1] << " " << parsedInput[2] << */"; "<< statusMessage << "\n";
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <<"; "<< statusMessage << "\n";
         close(sockTemp);
         return;
         
     }
-    
-    cout << badFlag << endl;
-    
-    //fileNameIn = strtok(fileNameIn.c_str(),"GET ");
-    //std::string fullInput = fileNameIn;
-    
-    //THIS IS WHATS STRIPPING SPACES AND DOTS
-    
-    //char* tempFileIn = strtok((char*)fileNameIn.c_str(),"GET ");
-    //tempFileIn = strtok(tempFileIn,"HTTP/1.0");
-    //fileNameIn = (std::string)tempFileIn;
     
     if(!fileNameIn.empty())
     {
@@ -162,7 +135,7 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
     if(baseCase)
         fileNameIn = "index.html";
     
-    while ((dirp = readdir(myDir)) != NULL && badFlag==0)
+    while ((dirp = readdir(myDir)) != NULL)
     {
         fileName = (char*)dirp->d_name;
         if(fileName == fileNameIn)
@@ -172,23 +145,23 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
         }
     }
     
-
+    
     requestedFile.insert(0,"/");
-
+    
     
     requestedFile.insert(0,root);
     
     fileNameIn.insert(0,requestedFile);
-        
+    
     cout << requestedFile<< " filenameIN "<< fileNameIn<< endl;
     
     f = fopen(requestedFile.c_str(),"rb");
     
     
-
+    
     if(fnf)
     {
-        //cout<<"File = null pointer\n";
+        
         statusMessage = "HTTP/1.0 404 Not Found; ";
         cout << seq << " ";
         
@@ -198,12 +171,12 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
         
         if(weTookOutASlash)
             cout << "/";
-            
+        
         cout<<parsedInput[1] << " " << parsedInput[2] << "; "<< statusMessage <<fileNameIn<<"\n";
         
         close(sockTemp);
         return;
-
+        
     }
     
     stat(requestedFile.c_str(),&st);
@@ -219,17 +192,11 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
 	}
     
     fread(buffer, fLen, 1, f);
-    //cout<<"Buffer has been written with length " << fLen << " \n";
 	fclose(f);
-    
-    
-    //cout << "Peer Name: " << inet_ntoa(hostAddr.sin_addr) << "\n";
-    //cout << "TEST TEST";
     cout << seq << " ";
-
     printTime();
     
-    cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << /*fullInput*/ parsedInput[0]<< " ";
+    cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << parsedInput[0]<< " ";
     
     if(weTookOutASlash)
         cout << "/";
@@ -238,45 +205,45 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
     
     send(sockTemp,(char*)buffer,fLen+1,0);
     
-    
-    //std::string returnAddr;
-    //cout << hostAddr.sin_port;
-    //printf("%u", hostAddr.sin_port);
-    //returnAddr.insert(0, portString);
-    //char* portOut;
-    //sprintf(portOut,"%d",ntohs(hostAddr.sin_port));
-    //returnAddr.insert(0, parsedInput[2]);
-    //returnAddr.insert(0, " ");
-    //returnAddr.insert(0, portOut);
-    //returnAddr.insert(0, ":");
-    //returnAddr.insert(0, inet_ntoa(hostAddr.sin_addr));
-    
     close(sockTemp);
     
-    //return returnAddr;
+}
+
+void set_keypress(void) {
+    struct termios new_settings;
+    tcgetattr(0,&stored_settings);
+    new_settings = stored_settings;
+    new_settings.c_lflag &= (~ICANON);
+    new_settings.c_cc[VTIME] = 0;
+    tcgetattr(0,&stored_settings);
+    new_settings.c_cc[VMIN] = 1;
+    tcsetattr(0,TCSANOW,&new_settings);
+}
+
+void reset_keypress(void) {
+    tcsetattr(0,TCSANOW,&stored_settings);
 }
 
 std::string connection(char* root, int portNum)
 {
     int seq = 0;
-
-    
     int opt = 1;
+	struct timeval timeout;
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
     
     struct sockaddr_in ip4addr;
     
 	ip4addr.sin_family = AF_INET;
 	ip4addr.sin_port = htons(portNum);
 	ip4addr.sin_addr.s_addr = INADDR_ANY;
-	
+    
 	int sockfd = socket(PF_INET, SOCK_STREAM, 0);
     setsockopt(sockfd, IPPROTO_TCP, SO_REUSEADDR, (char*)&opt,sizeof(opt));
 	bind(sockfd, (sockaddr*)&ip4addr, sizeof(sockaddr_in));
     
-    
     cout << "sws is running on TCP port " << portNum << " and serving " << root << "\n";
     cout << "press ‘q’ to quit ...\n";
-    
     
     while(true)
     {
@@ -284,55 +251,33 @@ std::string connection(char* root, int portNum)
         FD_ZERO(&listenfds);
         FD_SET(sockfd,&listenfds);
         FD_SET(STDIN_FILENO,&listenfds);
-        //FD_SET( ,inputfds);
         
+        /*set_keypress();
+        if(getchar()=='q')
+            exit(0);
+        reset_keypress();*/
+        
+        /*int check =  select(16000 , &listenfds , NULL , NULL , &timeout);
+        //cout<< "SELECT RETURNS "<<check<<"\n";
+		if(check ==0)//time-out occurred before socket was used
+		{
+            //	cout<<"WAITING ON KEYBOARD"<<"\n";
+			
+		}
+        if(check==1)//one socket is free*/
         //{
-
-        if(select(16000 , &listenfds , NULL , NULL , NULL))
-        {
-            
-            
-            
-            
-            if(FD_ISSET(sockfd,&listenfds))
-            {
-
-            listen(sockfd, SOMAXCONN);
+	        listen(sockfd, SOMAXCONN);
             reqWait(sockfd, ip4addr, root, seq);
             seq++;
-            }
-            
-            /*if(FD_ISSET(STDIN_FILENO,&listenfds))
-            {
-                exit(0);
-            }*/
-            /*else if(FD_ISSET(0,&listenfds))
-            {
-                if(getchar() =='q')
-                {
-                    close(sockfd);
-                    exit(0);
-                }
-            }*/
-        }
-        
-        //else
-        //{
-          
-        //}
-        
-    
-        
-        
+		//}
     }
-	
 }
 
 int main (int numArgs, char** args)
 {
 	int portNum;
     char* root;
-
+    
 	if(numArgs == 3)
 	{
 		portNum = atoi(args[1]);
@@ -345,14 +290,6 @@ int main (int numArgs, char** args)
 		return 0;
 	}
     
-    //std::string peerAddr = connection(root, portNum);
-    
     connection(root,portNum);
     
-       // cout << seq << " ";
-        
-       //cout << " " << peerAddr << "\n";
-    //}
 }
-
-
