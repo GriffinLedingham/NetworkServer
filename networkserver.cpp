@@ -38,52 +38,88 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
     socklen_t len;
     std:string statusMessage = "HTTP/1.0 200 OK; ";
     bool fnf = true;
+    bool weTookOutASlash = false;
+    bool baseCase = false;
+    int badFlag= 0;
+    int count = 0;
     
-    void *buf = calloc(5000, sizeof(char));
+    void *bufIn = calloc(5000, sizeof(char));
 
     
 	int sockTemp = accept(sockfd, (sockaddr*)&ip4addr, &len);
-	recv(sockTemp, buf, 5000, 0);
+	recv(sockTemp, bufIn, 5000, 0);
     
     struct sockaddr_in hostAddr;
     getpeername(sockTemp, (sockaddr *)&hostAddr, &len);
     
     std::string fileNameIn;
+    char* buf = (char*)bufIn;
+    std::string slash (" / ");
+    
+    if(buf[3] == ' ' && buf[4] == '/' && buf[5] == ' ')
+    {
+        baseCase = true;
+        buf[4] = '/';
+        weTookOutASlash= false;
+    }
+    else if(buf[4] == '/')// && !fileNameIn.find(slash))
+    {
+        buf[4] = ' ';
+        weTookOutASlash = true;
+        
+    }
+    
+    //"GET index.html HTTP/1.0"
+    
+    //if(fileNameIn.find(slash)){
+    
     
     fileNameIn= strtok((char*)buf,"\r\n");
-    cout << (char*)fileNameIn;
-    cout << endl;
+    //cout << fileNameIn;
+    //cout << endl;
     std::string fullInput = fileNameIn;
     
-    std::string temp;
-    temp = (std::string)strtok((char*)fileNameIn.c_str()," ");
-    bool emptyFlag= false;
+    //std::string temp;
+    char* temp;
+    temp = /*(std::string)*/strtok((char*)fileNameIn.c_str()," ");
+
     
+    //temp = strtok(NULL, " ");
     
-    for(int i =0;i<2;i++)
+    while(temp != NULL && count<3)
     {
-        if(temp.empty())
+       /* if(temp.empty())
         {
             emptyFlag = true;
             break;
         }
-        
-        parsedInput[i] = temp;
-        
+        */
+        parsedInput[count] = temp;
+        cout << parsedInput[count] << endl;
         temp = strtok(NULL, " ");
-        /*if(temp.find("/"))
+        count++;
+               /*if(temp.find("/"))
         {
             temp = temp.substr(1,temp.length()-1);
         }*/
-        cout << parsedInput[i] << "\n";
+        //cout << parsedInput[i] << "\n";
         //cout << parsedInput[i] << "\n";
         
     }
-    if(!emptyFlag)
+    if(temp !=NULL)
     {
-        parsedInput[2] = temp;
-        cout << parsedInput[2] << "\n";
+        statusMessage = "HTTP/1.0 400 Bad Request; ";
+        cout << seq << " ";
+        
+        printTime();
+        
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <</* " " << parsedInput[0] << " /" <<parsedInput[1] << " " << parsedInput[2] << */"; "<< statusMessage << "\n";
+        close(sockTemp);
+        badFlag=1;
+        return;
     }
+
+    
     //cout << parsedInput[2] << "\n";
     //temp
     fileNameIn = parsedInput[1];
@@ -95,13 +131,13 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
         
         printTime();
         
-        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << fullInput << "; "<< statusMessage << "\n";
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) <</* " " << parsedInput[0] << " /" <<parsedInput[1] << " " << parsedInput[2] << */"; "<< statusMessage << "\n";
         close(sockTemp);
         return;
         
     }
     
-    
+    cout << badFlag << endl;
     
     //fileNameIn = strtok(fileNameIn.c_str(),"GET ");
     //std::string fullInput = fileNameIn;
@@ -119,7 +155,11 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
     
     std::string fileName = "";
     std::string requestedFile = "";
-    while ((dirp = readdir(myDir)) != NULL)
+    
+    if(baseCase)
+        fileNameIn = "index.html";
+    
+    while ((dirp = readdir(myDir)) != NULL && badFlag==0)
     {
         fileName = (char*)dirp->d_name;
         if(fileName == fileNameIn)
@@ -128,8 +168,17 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
             fnf = false;
         }
     }
+    
+
     requestedFile.insert(0,"/");
+
+    
     requestedFile.insert(0,root);
+    
+    fileNameIn.insert(0,requestedFile);
+        
+    cout << requestedFile<< " filenameIN "<< fileNameIn<< endl;
+    
     f = fopen(requestedFile.c_str(),"rb");
     
     
@@ -142,7 +191,13 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
         
         printTime();
         
-        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << fullInput << "; "<< statusMessage << "\n";
+        cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " <<parsedInput[0]<<" ";
+        
+        if(weTookOutASlash)
+            cout << "/";
+            
+        cout<<parsedInput[1] << " " << parsedInput[2] << "; "<< statusMessage <<fileNameIn<<"\n";
+        
         close(sockTemp);
         return;
 
@@ -171,9 +226,12 @@ void reqWait(int sockfd, sockaddr_in ip4addr, char* root, int seq)
 
     printTime();
     
-    cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << parsedInput[0] << " " << parsedInput[1] << " " << parsedInput[2] << ";"<< statusMessage << " "<< root << parsedInput[1];
+    cout << " " << inet_ntoa(hostAddr.sin_addr) << ":" << ntohs(hostAddr.sin_port) << " " << /*fullInput*/ parsedInput[0]<< " ";
     
-    cout << endl;
+    if(weTookOutASlash)
+        cout << "/";
+    
+    cout<<parsedInput[1] << " " << parsedInput[2] << "; "<< statusMessage <<requestedFile<< "\n";
     
     send(sockTemp,(char*)buffer,fLen+1,0);
     
