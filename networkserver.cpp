@@ -8,9 +8,6 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <stdio.h>
-#include <termios.h>
-
-static struct termios stored_settings;
 
 using namespace std;
 
@@ -209,31 +206,13 @@ std:string statusMessage = "HTTP/1.0 200 OK; ";
     
 }
 
-void set_keypress(void) {
-    struct termios new_settings;
-    tcgetattr(0,&stored_settings);
-    new_settings = stored_settings;
-    new_settings.c_lflag &= (~ICANON);
-    new_settings.c_cc[VTIME] = 0;
-    tcgetattr(0,&stored_settings);
-    new_settings.c_cc[VMIN] = 1;
-    tcsetattr(0,TCSANOW,&new_settings);
-}
-
-void reset_keypress(void) {
-    tcsetattr(0,TCSANOW,&stored_settings);
-}
-
 std::string connection(char* root, int portNum)
 {
+    fd_set listenfds;
+    char buffer[1000];
     int seq = 0;
     int opt = 1;
-	struct timeval timeout;
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-    
     struct sockaddr_in ip4addr;
-    
 	ip4addr.sin_family = AF_INET;
 	ip4addr.sin_port = htons(portNum);
 	ip4addr.sin_addr.s_addr = INADDR_ANY;
@@ -244,32 +223,29 @@ std::string connection(char* root, int portNum)
     
     cout << "sws is running on TCP port " << portNum << " and serving " << root << "\n";
     cout << "press ‘q’ to quit ...\n";
+    listen(sockfd, SOMAXCONN);
     
     while(true)
     {
-        fd_set listenfds;
         FD_ZERO(&listenfds);
         FD_SET(sockfd,&listenfds);
-        FD_SET(STDIN_FILENO,&listenfds);
+        FD_SET(0,&listenfds);
         
-        /*set_keypress();
-        if(getchar()=='q')
-            exit(0);
-        reset_keypress();*/
+        select(sockfd+1, &listenfds, 0, 0, 0);
         
-        /*int check =  select(16000 , &listenfds , NULL , NULL , &timeout);
-        //cout<< "SELECT RETURNS "<<check<<"\n";
-		if(check ==0)//time-out occurred before socket was used
-		{
-            //	cout<<"WAITING ON KEYBOARD"<<"\n";
-			
-		}
-        if(check==1)//one socket is free*/
-        //{
-	        listen(sockfd, SOMAXCONN);
+        if(FD_ISSET(0, &listenfds))
+        {
+            fgets(buffer,1000,stdin);
+            if(buffer[0] =='q')
+            {
+                exit(0);
+            }
+        }
+        
+        if (FD_ISSET(sockfd, &listenfds)) {
             reqWait(sockfd, ip4addr, root, seq);
             seq++;
-		//}
+        }
     }
 }
 
