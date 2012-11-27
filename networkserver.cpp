@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <termios.h>
 
 using namespace std;
 
@@ -223,6 +224,7 @@ std::string connection(char* root, int portNum)
     
     cout << "sws is running on TCP port " << portNum << " and serving " << root << "\n";
     cout << "press ‘q’ to quit ...\n";
+    
     listen(sockfd, SOMAXCONN);
     
     while(true)
@@ -241,8 +243,8 @@ std::string connection(char* root, int portNum)
                 exit(0);
             }
         }
-        
-        if (FD_ISSET(sockfd, &listenfds)) {
+        if (FD_ISSET(sockfd, &listenfds))
+        {
             reqWait(sockfd, ip4addr, root, seq);
             seq++;
         }
